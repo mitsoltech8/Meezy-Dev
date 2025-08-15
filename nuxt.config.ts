@@ -1,3 +1,5 @@
+import { defineNuxtConfig } from "nuxt/config"
+
 export default defineNuxtConfig({
   css: ['~/assets/css/tailwind.css'],
   postcss: {
@@ -13,4 +15,12 @@ export default defineNuxtConfig({
       pathPrefix: false,
     },
   ],
+
+
+   runtimeConfig: {
+    public: {
+      baseURL: 'http://localhost:4000/api', // Your backend API
+    },
+  },
+
 })

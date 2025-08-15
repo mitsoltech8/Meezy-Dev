@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -22,18 +22,40 @@ import { Cross, Filter, ListFilter, MoreHorizontal } from 'lucide-vue-next'
 // Active Tab
 const activeTab = ref<'satis' | 'onay'>('satis')
 
-// Dummy Data
-const satisProducts = [
-  { id: 1, name: 'Yeezy Boost 350 V2 Steel Grey', size: '44 2/3', price: 300, sellerPrice: '12.000,00 TL', status: 'Satışta' },
-  { id: 2, name: 'Yeezy Boost 350 V2 Steel Grey', size: '41 1/3', price: 250, sellerPrice: '12.000,00 TL', status: 'Satışta' }
-]
 
-const onayProducts = [
-  { id: 3, name: 'Yeezy Boost 350 V2 Steel Grey', size: '44 2/3', price: 200, sellerPrice: '8.000,00 TL', status: 'Onay Bekleyen' },
-  { id: 4, name: 'Yeezy Boost 350 V2 Steel Grey', size: '41 1/3', price: 220, sellerPrice: '9.500,00 TL', status: 'Onay Bekleyen' }
-]
 
-const products = computed(() => activeTab.value === 'satis' ? satisProducts : onayProducts)
+// Products Data
+const products = ref([] as any[])
+
+
+const fetchProducts = async () => {
+  try {
+    const config = useRuntimeConfig(); // Get runtime config
+    const response = await $fetch(`${config.public.baseURL}/products`); // Use dynamic baseURL from config
+    console.log('Fetched Products:', response); // Log the response to verify the structure
+    products.value = response.products || []; // Ensure we are setting the products correctly
+  } catch (error) {
+    console.error('Error fetching products:', error);
+  }
+};
+
+
+onMounted(() => {
+  fetchProducts()
+})
+
+// Computed data based on active tab
+
+const filteredProducts = computed(() => {
+  return products.value.filter((product) =>
+    activeTab.value === 'satis' 
+      ? product.status === 'active' // For active status when in 'satis' tab
+      : product.status === 'draft'  // For draft status when in 'onay' tab
+  );
+});
+
+
+
 
 const editProduct = (id: number) => {
   alert(`Düzenle clicked for product ID: ${id}`)
@@ -42,6 +64,8 @@ const editProduct = (id: number) => {
 const deleteProduct = (id: number) => {
   alert(`Sil clicked for product ID: ${id}`)
 }
+
+
 </script>
 
 <template>
@@ -112,54 +136,54 @@ const deleteProduct = (id: number) => {
       </div>
 
       <!-- Table -->
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Ürün</TableHead>
-            <TableHead>Beden</TableHead>
-            <TableHead>Fiyat</TableHead>
-            <TableHead>Satıcıya Kalan</TableHead>
-            <TableHead>Durum</TableHead>
-            <TableHead class="text-right">İşlem</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          <TableRow v-for="product in products" :key="product.id">
-            <TableCell class="flex items-center gap-3">
-              <div class="w-16 h-16 bg-gray-200 rounded "></div>
-              <span>{{ product.name }}</span>
-            </TableCell>
-            <TableCell>{{ product.size }}</TableCell>
-            <TableCell>{{ product.price }}</TableCell>
-            <TableCell>{{ product.sellerPrice }}</TableCell>
-            <TableCell>
-              <Badge variant="outline" class="text-[#18181B] font-inter text-xs font-semibold leading-4 py-[2px] px-[10px]">{{ product.status }}</Badge>
-            </TableCell>
-            <TableCell class="text-right">
-              <DropdownMenu>
-                <DropdownMenuTrigger as-child>
-                  <Button variant="ghost" class="h-8 w-8 p-0">
-                    <span class="sr-only">Open menu</span>
-                    <MoreHorizontal class="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem @click="editProduct(product.id)">
-                    Düzenle
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    @click="deleteProduct(product.id)"
-                    class="text-red-600 focus:text-red-600"
-                  >
-                    Sil
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </TableCell>
-          </TableRow>
-        </TableBody>
-      </Table>
+     <Table>
+  <TableHeader>
+    <TableRow>
+      <TableHead>Ürün</TableHead>
+      <TableHead>Beden</TableHead>
+      <TableHead>Fiyat</TableHead>
+      <TableHead>Satıcıya Kalan</TableHead>
+      <TableHead>Durum</TableHead>
+      <TableHead class="text-right">İşlem</TableHead>
+    </TableRow>
+  </TableHeader>
+<TableBody>
+<TableRow v-for="product in filteredProducts" :key="product.id">
+  <TableCell class="flex items-center gap-3">
+    <div class="w-16 h-16 bg-gray-200 rounded"></div>
+    <span>{{ product.title || 'No title' }}</span> <!-- Default 'No title' if title is missing -->
+  </TableCell>
+  <TableCell>{{ product.size || 'N/A' }}</TableCell> <!-- Default 'N/A' if size is missing -->
+  <TableCell>{{ product.price || 'N/A' }}</TableCell> <!-- Default 'N/A' if price is missing -->
+  <TableCell>{{ product.sellerPrice || 'N/A' }}</TableCell> <!-- Default 'N/A' if sellerPrice is missing -->
+  <TableCell>
+    <Badge variant="outline" class="text-[#18181B] font-inter text-xs font-semibold leading-4 py-[2px] px-[10px]">{{ product.status || 'Unknown' }}</Badge>
+  </TableCell>
+  <TableCell class="text-right">
+    <DropdownMenu>
+      <DropdownMenuTrigger as-child>
+        <Button variant="ghost" class="h-8 w-8 p-0">
+          <span class="sr-only">Open menu</span>
+          <MoreHorizontal class="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem @click="editProduct(product.id)">
+          Düzenle
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem @click="deleteProduct(product.id)" class="text-red-600 focus:text-red-600">
+          Sil
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  </TableCell>
+</TableRow>
+
+</TableBody>
+
+</Table>
+
 </div>
       <!-- Bottom Left Product Count -->
       <div class="pt-4 text-sm text-gray-600 border-t border-[#E4E4E7] w-full m-0">
