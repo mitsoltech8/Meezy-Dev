@@ -10,6 +10,8 @@
       <NuxtLink to="/login">Go to Login</NuxtLink>
          <br></br>
       <NuxtLink to="/profile">Go to Profile</NuxtLink>
+            <br></br>
+      <NuxtLink to="/products">Go to Product page</NuxtLink>
     </div>
   </div>
 </template>

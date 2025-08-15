@@ -29,7 +29,7 @@
     </div>
  
     <!-- Content -->
-   <ProfileForm />
+    <MyProduct />
     <slot />
   </main>
 </SidebarProvider>
@@ -42,7 +42,7 @@
 <script setup>
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import AppSidebar from "@/components/AppSidebar.vue";
-import ProfileForm from '~/components/Profile-form/ProfileForm.vue'
+import MyProduct from '~/components/MyProducts.vue';
 import { LucideSeparatorVertical } from "lucide-vue-next";
  
  
