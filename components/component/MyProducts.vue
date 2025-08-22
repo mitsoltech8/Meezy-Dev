@@ -13,6 +13,64 @@ import {
   MoreHorizontal, ChevronDown, ChevronRight, CornerRightDown, ListFilter, Plus
 } from "lucide-vue-next"
 
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+import { Toaster, toast } from "vue-sonner"
+
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
+
+
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+const showTabs = ref(false)
+
+// dialog state
+const showDeleteDialog = ref(false)
+const deleteTargetId = ref<number | string | null>(null)
+
+// alert state
+const alertMessage = ref("")
+const alertType = ref<"success" | "error" | "cancel" | null>(null)
+const showAlert = ref(false)
+
+// confirm delete
+const confirmDelete = async () => {
+  showDeleteDialog.value = false
+  try {
+    // yahan tum actual delete API call ya logic lagao
+    const success = Math.random() > 0.5 // dummy: kabhi success, kabhi fail
+
+    if (success) {
+      alertMessage.value = "Data Removed Successfully!"
+      alertType.value = "success"
+    } else {
+      throw new Error("Data Deletion Failed!")
+    }
+  } catch (error) {
+    alertMessage.value = "Data Deletion Failed!"
+    alertType.value = "error"
+  }
+
+  triggerAlert()
+}
+
+// cancel delete
+const cancelDelete = () => {
+  showDeleteDialog.value = false
+  alertMessage.value = "Silme işlemi iptal edildi!"
+  alertType.value = "cancel"
+  triggerAlert()
+}
+
+// helper for showing alert
+const triggerAlert = () => {
+  showAlert.value = true
+  setTimeout(() => {
+    showAlert.value = false
+  }, 5000) // 5 sec baad gayab
+}
+
+
+
+
 /** Tabs */
 const activeTab = ref<"satis" | "onay">("satis")
 
@@ -146,9 +204,31 @@ const editProduct = (id: number | string) => {
 const deleteProduct = (id: number | string) => {
   alert(`Sil clicked for product ID: ${id}`)
 }
+
 </script>
 
 <template>
+<transition name="slide-fade">
+  <div
+    v-if="showAlert"
+    :class="[ 
+      'fixed top-12 right-12 rounded-md shadow-lg text-white px-6 py-6 transition-all flex items-start justify-between',
+      alertType === 'success' ? 'bg-green-600' : 'bg-red-600'
+    ]"
+    style="width: 350px;"
+  >
+    <span>{{ alertMessage }}</span>
+
+    <!-- Close Button -->
+    <button 
+      @click="showAlert = false"
+      class="ml-4 text-white hover:text-white focus:outline-none"
+    >
+      ✖
+    </button>
+  </div>
+</transition>
+
   <div class="space-y-4">
     <!-- Header Actions -->
     <div class="flex justify-between items-center mb-2.5">
@@ -174,28 +254,39 @@ const deleteProduct = (id: number | string) => {
         </button>
       </div>
 
-      <!-- Right Buttons -->
-      <div class="flex gap-2">
-        <DropdownMenu>
-          <DropdownMenuTrigger as-child>
-            <Button variant="outline" class="flex items-center gap-2">
-              <ListFilter class="w-4 h-4" />
-              Filter
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuItem>Fiyat (Azdan Çoğa)</DropdownMenuItem>
-            <DropdownMenuItem>Fiyat (Çoktan Aza)</DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>Durum</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+<!-- Header Actions -->
+<div class="flex justify-between items-start mb-2.5 gap-4">
+  <!-- Tabs (left side, row layout) -->
+  <div v-if="showTabs" class="w-auto ">
+    <Tabs default-value="all" class="w-full">
+      <TabsList class="flex flex-row gap-2">
+   <TabsTrigger value="all">Tümü</TabsTrigger>
+<TabsTrigger value="active">Aktif</TabsTrigger>
+<TabsTrigger value="draft">Taslak</TabsTrigger>
+<TabsTrigger value="archive">Arşiv</TabsTrigger>
 
-        <Button class="flex items-center gap-2">
-          <Plus class="w-4 h-4" />
-          Ürün Ekle
-        </Button>
-      </div>
+      </TabsList>
+    </Tabs>
+  </div>
+
+  <!-- Right Buttons -->
+  <div class="flex gap-2">
+    <Button
+      variant="outline"
+      class="flex items-center gap-2"
+      @click="showTabs = !showTabs"
+    >
+      <ListFilter class="w-4 h-4" />
+      Filter
+    </Button>
+
+    <Button class="flex items-center gap-2">
+      <Plus class="w-4 h-4" />
+      Ürün Ekle
+    </Button>
+  </div>
+</div>
+
     </div>
 
     <!-- Table Section -->
@@ -278,9 +369,15 @@ const deleteProduct = (id: number | string) => {
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem @click="editProduct(product.id)">Düzenle</DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem @click="deleteProduct(product.id)" class="text-red-600">
-                        Sil
-                      </DropdownMenuItem>
+                   <DropdownMenuItem
+  @click="deleteTargetId = product.id; showDeleteDialog = true"
+  class="text-red-600 bg-[#FEF2F2] hover:text-red-600 hover:bg-[#fbd0d0] focus:text-red-600 focus:bg-[#fbd0d0]"
+>
+  Sil
+</DropdownMenuItem>
+
+
+
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>
@@ -327,9 +424,13 @@ const deleteProduct = (id: number | string) => {
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem @click="editProduct(variation.id)">Düzenle</DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem @click="deleteProduct(variation.id)" class="text-red-600">
-                        Sil
-                      </DropdownMenuItem>
+<DropdownMenuItem
+  @click="deleteTargetId = product.id; showDeleteDialog = true"
+  class="text-red-600 bg-[#FEF2F2] hover:text-red-600 hover:bg-[#fbd0d0] focus:text-red-600 focus:bg-[#fbd0d0]"
+>
+  Sil
+</DropdownMenuItem>
+
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>
@@ -353,4 +454,24 @@ const deleteProduct = (id: number | string) => {
       </div>
     </div>
   </div>
+
+
+
+  <Dialog v-model:open="showDeleteDialog">
+  <DialogContent>
+    <DialogHeader>
+      <DialogTitle class="text-[#18181B] text-center font-inter text-lg font-semibold leading-none">Remove Listing?</DialogTitle>
+      <DialogDescription class="text-[#71717A] text-center text-sm font-normal leading-5">
+       Are you sure you want to remove listing?
+      </DialogDescription>
+    </DialogHeader>
+   <DialogFooter class="flex sm:justify-center justify-center gap-2 items-center">
+  <Button variant="destructive" @click="confirmDelete" class="w-full rounded-md bg-[#18181B] shadow text-[#FAFAFA] font-medium text-sm leading-5 font-inter">Remove Listing</Button>
+</DialogFooter>
+
+  </DialogContent>
+</Dialog>
+
+
 </template>
+

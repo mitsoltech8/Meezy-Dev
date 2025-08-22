@@ -1,5 +1,4 @@
 <template>
-
   <div class="side-bar">
     <!-- Sidebar -->
   <SidebarProvider>
@@ -31,7 +30,6 @@
  
     <!-- Content -->
     <MyProduct />
-    
     <slot />
   </main>
 </SidebarProvider>
@@ -43,8 +41,8 @@
  
 <script setup>
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import AppSidebar from "@/components/component/AppSidebar.vue";
-import MyProduct from '~/components/component/MyProducts.vue';
+import AppSidebar from "@/components/AppSidebar.vue";
+import MyProduct from '~/components/MyProducts.vue';
 import { LucideSeparatorVertical } from "lucide-vue-next";
  
  
