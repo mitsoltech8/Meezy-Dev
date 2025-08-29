@@ -30,11 +30,11 @@
         <div class="flex flex-wrap gap-[15px] my-4">
           <div class="flex flex-col flex-1 min-w-[200px] my-4">
             <label class="mb-2 text-[#18181B] font-inter text-[14px] font-medium leading-[100%]">Adınız</label>
-            <input type="text" placeholder="Adınızı girin" class="p-5 border border-[#E4E4E7] rounded-md text-[16px] font-inter shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] placeholder-[#71717A]" />
+            <input type="text"  v-model="form.firstName"  placeholder="Adınızı girin" class="p-5 border border-[#E4E4E7] rounded-md text-[16px] font-inter shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] placeholder-[#71717A]" />
           </div>
           <div class="flex flex-col flex-1 min-w-[200px] my-4">
             <label class="mb-2 text-[#18181B] font-inter text-[14px] font-medium leading-[100%]">Soyadınız</label>
-            <input type="text" placeholder="Soyadınızı girin" class="p-5 border border-[#E4E4E7] rounded-md text-[16px] font-inter shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] placeholder-[#71717A]" />
+            <input type="text"  v-model="form.lastName" placeholder="Soyadınızı girin" class="p-5 border border-[#E4E4E7] rounded-md text-[16px] font-inter shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] placeholder-[#71717A]" />
           </div>
         </div>
 
@@ -51,7 +51,7 @@
           </div>
           <div class="flex flex-col flex-1 min-w-[200px] my-4">
             <label class="mb-2 text-[#18181B] font-inter text-[14px] font-medium leading-[100%]">National ID (TCID)</label>
-            <input type="text" placeholder="Enter your national ID number (e.g., 12345678901)" class="p-5 border border-[#E4E4E7] rounded-md text-[16px] font-inter shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] placeholder-[#71717A]" />
+            <input  type="text" v-model="form.nationalId"   placeholder="Enter your national ID number (e.g., 12345678901)" class="p-5 border border-[#E4E4E7] rounded-md text-[16px] font-inter shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] placeholder-[#71717A]" />
           </div>
         </div>
       </div>
@@ -61,7 +61,7 @@
         <h2 class="text-[#18181B] font-roboto text-[22px] font-medium leading-[28px] mb-5 ml-[3px]">2. Hesap Bilgileri</h2>
         <div class="my-4">
           <label class="mb-2 text-[#18181B] font-inter text-[14px] font-medium leading-[100%]">E-posta</label>
-          <input type="email" placeholder="E-posta adresinizi girin (örn. john@example.com)" class="p-5 border border-[#E4E4E7] rounded-md text-[16px] font-inter shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] placeholder-[#71717A] w-full" />
+          <input type="email" v-model="form.email" placeholder="E-posta adresinizi girin (örn. john@example.com)" class="p-5 border border-[#E4E4E7] rounded-md text-[16px] font-inter shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] placeholder-[#71717A] w-full" />
         </div>
         <div class="flex flex-wrap gap-[15px] my-4">
           <div class="flex flex-col flex-1 min-w-[200px] my-4">
@@ -81,16 +81,16 @@
         <div class="flex flex-wrap gap-[15px] my-4">
           <div class="flex flex-col flex-1 min-w-[200px] my-4">
             <label class="mb-2 text-[#18181B] font-inter text-[14px] font-medium leading-[100%]">Telefon Numarası</label>
-            <input type="text" placeholder="Telefon numaranızı girin (örn. +90 532...)" class="p-5 border border-[#E4E4E7] rounded-md text-[16px] font-inter shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] placeholder-[#71717A]" />
+            <input type="text" v-model="form.phone" placeholder="Telefon numaranızı girin (örn. +90 532...)" class="p-5 border border-[#E4E4E7] rounded-md text-[16px] font-inter shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] placeholder-[#71717A]" />
           </div>
           <div class="flex flex-col flex-1 min-w-[200px] my-4">
             <label class="mb-2 text-[#18181B] font-inter text-[14px] font-medium leading-[100%]">Şehir</label>
-            <input type="text" placeholder="Şehrinizi girin (örn. İstanbul)" class="p-5 border border-[#E4E4E7] rounded-md text-[16px] font-inter shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] placeholder-[#71717A]" />
+            <input type="text" placeholder="Şehrinizi girin (örn. İstanbul)" v-model="form.city" class="p-5 border border-[#E4E4E7] rounded-md text-[16px] font-inter shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] placeholder-[#71717A]" />
           </div>
         </div>
         <div class="flex flex-col my-4">
           <label class="mb-2 text-[#18181B] font-inter text-[14px] font-medium leading-[100%]">Adres</label>
-          <input type="text" placeholder="Tam adresinizi girin (örn. 123 Sokak, Daire 4B)" class="p-5 border border-[#E4E4E7] rounded-md text-[16px] font-inter shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] placeholder-[#71717A] w-full" />
+          <input type="text"  placeholder="Tam adresinizi girin (örn. 123 Sokak, Daire 4B)" class="p-5 border border-[#E4E4E7] rounded-md text-[16px] font-inter shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] placeholder-[#71717A] w-full" />
         </div>
       </div>
 
@@ -100,16 +100,16 @@
         <div class="flex flex-wrap gap-[15px] my-4">
           <div class="flex flex-col flex-1 min-w-[200px] my-4">
             <label class="mb-2 text-[#18181B] font-inter text-[14px] font-medium leading-[100%]">Vergi Numarası</label>
-            <input type="text" placeholder="Varsa vergi numaranızı girin" class="p-5 border border-[#E4E4E7] rounded-md text-[16px] font-inter shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] placeholder-[#71717A]" />
+            <input  type="text" v-model="form.taxNumber"  placeholder="Varsa vergi numaranızı girin"   class="p-5 border border-[#E4E4E7] rounded-md text-[16px] font-inter shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] placeholder-[#71717A]" />
           </div>
           <div class="flex flex-col flex-1 min-w-[200px] my-4">
             <label class="mb-2 text-[#18181B] font-inter text-[14px] font-medium leading-[100%]">Banka Hesabı</label>
-            <input type="text" placeholder="Banka hesap numaranızı veya IBAN girin" class="p-5 border border-[#E4E4E7] rounded-md text-[16px] font-inter shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] placeholder-[#71717A]" />
+            <input type="text" v-model="form.bankAccount"  placeholder="Banka hesap numaranızı veya IBAN girin" class="p-5 border border-[#E4E4E7] rounded-md text-[16px] font-inter shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] placeholder-[#71717A]" />
           </div>
         </div>
         <div class="flex flex-col my-4">
           <label class="mb-2 text-[#18181B] font-inter text-[14px] font-medium leading-[100%]">Vergi Detayları</label>
-          <input type="text" placeholder="Vergi ile ilgili ek bilgileri girin" class="p-5 border border-[#E4E4E7] rounded-md text-[16px] font-inter shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] placeholder-[#71717A] w-full" />
+          <input type="text" v-model="form.taxDetails" placeholder="Vergi ile ilgili ek bilgileri girin" class="p-5 border border-[#E4E4E7] rounded-md text-[16px] font-inter shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] placeholder-[#71717A] w-full" />
         </div>
       </div>
 
@@ -124,29 +124,170 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import flatPickr from 'vue-flatpickr-component'
 import 'flatpickr/dist/flatpickr.css'
+import axios from 'axios';
+import { useRouter } from 'vue-router';
+import { useLocalStorage } from '@vueuse/core'
 
-const imagePreview = ref('/Ellipse 1.svg')
 
+const form = ref({
+  firstName: '',
+  lastName: '',
+  dob: '',
+  nationalId: '',
+  email: '',
+  phone: '',
+  city: '',
+  address: '',
+  taxNumber: '',
+  bankAccount: '',
+  taxDetails: '',
+});
+
+const imagePreview = ref('/Ellipse 1.svg');
+const avatarFile = ref(null);
+
+// Define dateConfig here (the configuration object for flatpickr)
+const dateConfig = {
+  dateFormat: 'd-m-y',
+  allowInput: true,
+};
+
+// Handle image upload
 function handleImageUpload(e) {
-  const file = e.target.files[0]
+  const file = e.target.files[0];
   if (file) {
-    imagePreview.value = URL.createObjectURL(file)
+    avatarFile.value = file;
+    imagePreview.value = URL.createObjectURL(file);
   }
 }
 
-function submitForm() {
-  console.log('Form submitted')
-}
+axios.defaults.baseURL = 'http://localhost:4000';
 
-const form = ref({
-  dob: null,
-  nationalId: ''
-})
+// Fetch profile data on mounted
+onMounted(async () => {
+  const token = localStorage.getItem('auth_token');
+  
+  // Check if the token is available in localStorage
+  if (!token) {
+    alert("No token found, please log in again.");
+    this.$router.push('/login');  // Redirect to login if token is missing
+    return;
+  }
 
-const dateConfig = {
-  dateFormat: 'd-m-y'
-}
+  try {
+    // Set Authorization header with Bearer token
+    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    
+    console.log('Fetching profile...');
+    const { data } = await axios.get('/api/profile/me');
+    
+    console.log('Profile fetched:', data);
+    if (data) {
+      // Populate the form with profile data
+      Object.assign(form.value, {
+        firstName: data.firstName || '',
+        lastName: data.lastName || '',
+        dob: data.dob ? new Date(data.dob).toISOString().slice(0, 10) : '',
+        nationalId: data.nationalId || '',
+        email: data.email || '',
+        phone: data.phone || '',
+        city: data.city || '',
+        address: data.address || '',
+        taxNumber: data.taxNumber || '',
+        bankAccount: data.bankAccount || '',
+        taxDetails: data.taxDetails || '',
+      });
+      if (data.avatarUrl) imagePreview.value = data.avatarUrl;
+    }
+  } catch (e) {
+    console.error('Error fetching profile:', e);
+    alert('Profile fetching failed!');
+  }
+});
+
+
+
+
+// Submit form data
+const submitForm = async () => {
+  try {
+    // Log the value of dob before conversion
+    console.log('DOB value before conversion:', form.value.dob);
+
+    // Check if dob is a valid date
+    if (form.value.dob) {
+      // Split the date in d-m-y format and reformat it to YYYY-MM-DD
+      const dobParts = form.value.dob.split('-');
+      
+      // Check if the date has the correct number of parts (d, m, y)
+      if (dobParts.length === 3) {
+        const day = dobParts[0].padStart(2, '0'); // Ensure day is two digits
+        const month = dobParts[1].padStart(2, '0'); // Ensure month is two digits
+        const year = '20' + dobParts[2]; // Assume year is in 'yy' format
+
+        // Create a new date string in YYYY-MM-DD format
+        const formattedDate = `${year}-${month}-${day}`;
+
+        // Log the formatted date
+        console.log('Formatted Date:', formattedDate);
+
+        // Convert the formatted date to ISO string
+        const dobDate = new Date(formattedDate);
+        
+        // Check if the date is valid
+        if (isNaN(dobDate.getTime())) {
+          throw new Error('Invalid date format');
+        }
+
+        form.value.dob = dobDate.toISOString(); // Convert it to ISO format before submitting
+      } else {
+        throw new Error('Invalid date format');
+      }
+    } else {
+      console.error('DOB is empty or invalid');
+    }
+
+    const fd = new FormData();
+    Object.entries(form.value).forEach(([k, v]) => fd.append(k, v ?? ''));
+    if (avatarFile.value) fd.append('avatar', avatarFile.value);
+
+    const { data } = await axios.post('/api/profile/me', fd, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    alert('Veriler başarıyla kaydedildi');
+
+    router.push('http://localhost:3000/searchform');
+  } catch (e) {
+    alert('Kaydetme başarısız');
+    console.error('Error during profile submission:', e.response || e);  // Log detailed error
+  }
+};
+
+
+
+
+// const imagePreview = ref('/Ellipse 1.svg')
+
+// function handleImageUpload(e) {
+//   const file = e.target.files[0]
+//   if (file) {
+//     imagePreview.value = URL.createObjectURL(file)
+//   }
+// }
+
+// function submitForm() {
+//   console.log('Form submitted')
+// }
+
+// const form = ref({
+//   dob: null,
+//   nationalId: ''
+// })
+
+// const dateConfig = {
+//   dateFormat: 'd-m-y'
+// }
 </script>

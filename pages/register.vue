@@ -20,6 +20,7 @@
 
         <!-- Alert -->
         <div
+         v-if="successMessage"
           class="flex items-start border border-[#178C3A] bg-white rounded-lg py-3 px-4 mb-8 max-w-full lg:max-w-[500px] font-sans"
         >
           <div class="mr-3 mt-[3px]">
@@ -67,7 +68,7 @@
               type="text"
               placeholder="Adınızı ve soyadınızı girin"
               required
-              class="w-full px-3 py-4 rounded-md border border-[#E4E4E7] bg-white text-[#18181B] font-inter text-base font-normal shadow-sm placeholder-[#71717A] focus:outline-none"
+              class="w-full px-3 py-4 rounded-md border border-[#E4E4E7] bg-white text-[#18181B] font-inter text-base font-normal shadow-sm placeholder-[#71717A]  focus:ring-black"
             />
           </div>
 
@@ -99,7 +100,7 @@
                 v-model="form.dob"
                 :config="dateConfig"
                 placeholder="Doğum tarihinizi seçin"
-                class="w-full pl-11 pr-11 py-4 rounded-md border border-[#E4E4E7] bg-white text-[#18181B] font-inter text-base font-normal shadow-sm placeholder-[#71717A] focus:outline-none"
+                class="w-full pl-11 pr-11 py-4 rounded-md border border-[#E4E4E7] bg-white text-[#18181B] font-inter text-base font-normal shadow-sm placeholder-[#71717A] focus:ring-black"
               />
             </div>
           </div>
@@ -118,7 +119,7 @@
               type="email"
               placeholder="E-posta adresinizi girin"
               required
-              class="w-full px-3 py-4 rounded-md border border-[#E4E4E7] bg-white text-[#18181B] font-inter text-base font-normal shadow-sm placeholder-[#71717A] focus:outline-none"
+              class="w-full px-3 py-4 rounded-md border border-[#E4E4E7] bg-white text-[#18181B] font-inter text-base font-normal shadow-sm placeholder-[#71717A] focus:ring-black"
             />
           </div>
 
@@ -137,7 +138,7 @@
                 v-model="form.password"
                 placeholder="Güvenli bir şifre oluşturun"
                 required
-                class="pl-3 pr-11 py-4 w-full rounded-md border border-[#E4E4E7] bg-white text-[#18181B] font-inter text-base font-normal shadow-sm placeholder-[#71717A] focus:outline-none"
+                class="pl-3 pr-11 py-4 w-full rounded-md border border-[#E4E4E7] bg-white text-[#18181B] font-inter text-base font-normal shadow-sm placeholder-[#71717A] focus:ring-black"
               />
               <button
                 type="button"
@@ -210,6 +211,7 @@
 
 <script setup>
 import { ref } from "vue";
+import axios from 'axios';
 import FlatPickr from "vue-flatpickr-component";
 import "flatpickr/dist/flatpickr.css";
 
@@ -221,14 +223,51 @@ const form = ref({
 });
 
 const showPassword = ref(false);
+const successMessage = ref('');
 
 function togglePassword() {
   showPassword.value = !showPassword.value;
 }
 
+
+
 function handleRegister() {
   console.log("Form Submitted:", form.value);
-  alert(`Kayıt başarılı: ${form.value.name}`);
+  // alert(`Kayıt başarılı: ${form.value.name}`);
+
+
+    // Convert the 'dob' field into a valid date format 'YYYY-MM-DD'
+  const dateParts = form.value.dob.split('-'); // Split by hyphen (assuming it's in 'DD-MM-YY' format)
+  if (dateParts.length === 3) {
+    // Reformat it into 'YYYY-MM-DD'
+    const formattedDate = `20${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
+    
+    form.value.dob = formattedDate; // Assign it back to form.dob
+  } else {
+    console.error("Invalid date format.");
+    alert("Doğum tarihi geçerli formatta değil.");
+    return; // Don't proceed if the date is invalid
+  }
+ 
+
+   // Send POST request to backend to register the user
+  axios.post('http://localhost:4000/api/user/register', form.value)
+    .then(response => {
+      const { token, user } = response.data || {};
+      if (token) {
+        localStorage.setItem('auth_token', token);
+        localStorage.setItem('auth_user', JSON.stringify(user));
+      }
+
+
+       successMessage.value = `Kayıt başarılı: ${form.value.name}`;
+      console.log(response.data); // Log success message from backend
+      window.location.href = '/profile';
+    })
+    .catch(error => {
+      alert('Kayıt başarısız: ' + error.response.data.message);
+      console.error(error.response.data);
+    });
 }
 
 const dateConfig = {

@@ -13,72 +13,37 @@ import {
   MoreHorizontal, ChevronDown, ChevronRight, CornerRightDown, ListFilter, Plus
 } from "lucide-vue-next"
 
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
-import { Toaster, toast } from "vue-sonner"
-
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
-
-
+import { useRouter } from 'vue-router'
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-const showTabs = ref(false)
 
-// dialog state
+const showTabs = ref(false)
+const router = useRouter()
+
+// Tabs
+const activeTab = ref<"satis" | "onay">("satis")
+
+// Delete dialog
 const showDeleteDialog = ref(false)
 const deleteTargetId = ref<number | string | null>(null)
+const deleteTargetType = ref<'product' | 'variant' | null>(null)
+const deleteTargetProductId = ref<number | string | null>(null) // for variant deletion
 
-// alert state
+// Alert
 const alertMessage = ref("")
 const alertType = ref<"success" | "error" | "cancel" | null>(null)
 const showAlert = ref(false)
 
-// confirm delete
-const confirmDelete = async () => {
-  showDeleteDialog.value = false
-  try {
-    // yahan tum actual delete API call ya logic lagao
-    const success = Math.random() > 0.5 // dummy: kabhi success, kabhi fail
-
-    if (success) {
-      alertMessage.value = "Data Removed Successfully!"
-      alertType.value = "success"
-    } else {
-      throw new Error("Data Deletion Failed!")
-    }
-  } catch (error) {
-    alertMessage.value = "Data Deletion Failed!"
-    alertType.value = "error"
-  }
-
-  triggerAlert()
+// Expand rows
+const expanded = ref<number | string | null>(null)
+const toggleExpand = (id: number | string) => {
+  expanded.value = expanded.value === id ? null : id
 }
 
-// cancel delete
-const cancelDelete = () => {
-  showDeleteDialog.value = false
-  alertMessage.value = "Silme işlemi iptal edildi!"
-  alertType.value = "cancel"
-  triggerAlert()
-}
-
-// helper for showing alert
-const triggerAlert = () => {
-  showAlert.value = true
-  setTimeout(() => {
-    showAlert.value = false
-  }, 5000) // 5 sec baad gayab
-}
-
-
-
-
-/** Tabs */
-const activeTab = ref<"satis" | "onay">("satis")
-
-/** Types */
+// Types
 type VariantAPI = {
   id: number | string
-  title?: string       // e.g. "M"
-  price?: string       // string price
+  title?: string
+  price?: string
   option1?: string
   inventory_quantity?: number
   image_id?: number | string | null
@@ -109,24 +74,17 @@ type Product = {
   image?: string
   statusKey: "active" | "draft"
   statusLabel: string
-  // quick summary for main row
   size?: string
   priceMin?: number | null
   variations: Variation[]
 }
 
-/** Data state */
+// Data state
 const allProducts = ref<Product[]>([])
 const loading = ref(true)
 const errorMessage = ref("")
 
-/** Expand/collapse (single open) */
-const expanded = ref<number | string | null>(null)
-const toggleExpand = (id: number | string) => {
-  expanded.value = expanded.value === id ? null : id
-}
-
-/** Helpers */
+// Helpers
 const parsePrice = (v: any) => {
   const n = typeof v === "number" ? v : parseFloat(v ?? "NaN")
   return Number.isFinite(n) ? n : null
@@ -140,7 +98,7 @@ const formatCurrency = (v: any) => {
 
 const pickImage = (p: ProductAPI) => p?.image?.src || p?.images?.[0]?.src || ""
 
-/** API fetch + normalization */
+// Fetch products from API
 const fetchProducts = async () => {
   try {
     const config = useRuntimeConfig()
@@ -156,19 +114,18 @@ const fetchProducts = async () => {
         size: v.title || v.option1,
         price: v.price,
         inventory: v.inventory_quantity ?? 0,
-        image: "", // per-variant image not provided in this payload (image_id exists, but no direct URL)
+        image: "",
         statusKey,
         statusLabel
       }))
 
-      // quick summary (first variant size, min price across variants)
       const size = p.variants?.[0]?.title || p.variants?.[0]?.option1
       const priceMin = (p.variants ?? [])
         .map((v) => parsePrice(v.price))
         .filter((n): n is number => n !== null)
         .sort((a, b) => a - b)[0] ?? null
 
-      const product: Product = {
+      return {
         id: p.id,
         title: p.title || "No title",
         image: pickImage(p),
@@ -177,8 +134,7 @@ const fetchProducts = async () => {
         size,
         priceMin,
         variations
-      }
-      return product
+      } as Product
     })
   } catch (err: any) {
     console.error(err)
@@ -190,29 +146,123 @@ const fetchProducts = async () => {
 
 onMounted(fetchProducts)
 
-/** Products by active tab */
+// Computed products by tab
 const products = computed(() =>
   allProducts.value.filter((p) =>
     activeTab.value === "satis" ? p.statusKey === "active" : p.statusKey === "draft"
   )
 )
 
-/** Actions */
-const editProduct = (id: number | string) => {
-  alert(`Düzenle clicked for product ID: ${id}`)
-}
-const deleteProduct = (id: number | string) => {
-  alert(`Sil clicked for product ID: ${id}`)
+// Show alert helper
+const triggerAlert = () => {
+  showAlert.value = true
+  setTimeout(() => showAlert.value = false, 5000)
 }
 
+// Delete product
+const deleteProduct = async (productId: number | string) => {
+  try {
+    const config = useRuntimeConfig()
+    const response: any = await $fetch(`${config.public.baseURL}/products/${productId}`, {
+      method: 'DELETE'
+    })
+
+    allProducts.value = allProducts.value.filter(p => p.id !== productId)
+    alertMessage.value = "Ürün başarıyla silindi!"
+    alertType.value = "success"
+  } catch (error: any) {
+    console.error(error)
+    alertMessage.value = error.message || "Ürün silinirken bir hata oluştu"
+    alertType.value = "error"
+  }
+  triggerAlert()
+}
+
+// Delete variant
+const deleteVariant = async (variantId: number | string, productId: number | string) => {
+  try {
+    const config = useRuntimeConfig()
+    const response: any = await $fetch(`${config.public.baseURL}/variants/${variantId}`, {
+      method: 'DELETE'
+    })
+
+    const product = allProducts.value.find(p => p.id === productId)
+    if (product) {
+      product.variations = product.variations.filter(v => v.id !== variantId)
+      if (product.variations.length > 0) {
+        product.size = product.variations[0].size
+        product.priceMin = Math.min(...product.variations.map(v => parsePrice(v.price) || 0))
+      } else {
+        allProducts.value = allProducts.value.filter(p => p.id !== productId)
+      }
+    }
+
+    alertMessage.value = "Varyasyon başarıyla silindi!"
+    alertType.value = "success"
+  } catch (error: any) {
+    console.error(error)
+    alertMessage.value = error.message || "Varyasyon silinirken bir hata oluştu"
+    alertType.value = "error"
+  }
+  triggerAlert()
+}
+
+// Confirm delete
+const confirmDelete = async () => {
+  showDeleteDialog.value = false
+  if (!deleteTargetId.value || !deleteTargetType.value) return
+
+  if (deleteTargetType.value === 'product') {
+    await deleteProduct(deleteTargetId.value)
+  } else if (deleteTargetType.value === 'variant' && deleteTargetProductId.value) {
+    await deleteVariant(deleteTargetId.value, deleteTargetProductId.value)
+  }
+
+  // Reset
+  deleteTargetId.value = null
+  deleteTargetType.value = null
+  deleteTargetProductId.value = null
+}
+
+// Cancel delete
+const cancelDelete = () => {
+  showDeleteDialog.value = false
+  alertMessage.value = "Silme işlemi iptal edildi!"
+  alertType.value = "cancel"
+  triggerAlert()
+
+  deleteTargetId.value = null
+  deleteTargetType.value = null
+  deleteTargetProductId.value = null
+}
+
+// Open delete dialogs
+const openProductDeleteDialog = (productId: number | string) => {
+  deleteTargetId.value = productId
+  deleteTargetType.value = 'product'
+  showDeleteDialog.value = true
+}
+
+const openVariantDeleteDialog = (variantId: number | string, productId: number | string) => {
+  deleteTargetId.value = variantId
+  deleteTargetType.value = 'variant'
+  deleteTargetProductId.value = productId
+  showDeleteDialog.value = true
+}
+
+// Edit variant
+const editVariation = (variationId: number | string, productId: number | string) => {
+  router.push(`/variant/${productId}/${variationId}`)
+}
 </script>
+
 
 <template>
 <transition name="slide-fade">
   <div
     v-if="showAlert"
     :class="[ 
-      'fixed top-12 right-12 rounded-md shadow-lg text-white px-6 py-6 transition-all flex items-start justify-between',
+      'fixed top-12  right-12 rounded-md shadow-lg text-white px-6 py-6 transition-all flex items-start justify-between z-99',
       alertType === 'success' ? 'bg-green-600' : 'bg-red-600'
     ]"
     style="width: 350px;"
@@ -280,10 +330,13 @@ const deleteProduct = (id: number | string) => {
       Filter
     </Button>
 
-    <Button class="flex items-center gap-2">
-      <Plus class="w-4 h-4" />
-      Ürün Ekle
-    </Button>
+
+    <NuxtLink to="/searchform">
+  <Button class="flex items-center gap-2">
+    <Plus class="w-4 h-4" />
+    Ürün Ekle
+  </Button>
+</NuxtLink>
   </div>
 </div>
 
@@ -366,19 +419,25 @@ const deleteProduct = (id: number | string) => {
                         <MoreHorizontal class="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem @click="editProduct(product.id)">Düzenle</DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                   <DropdownMenuItem
-  @click="deleteTargetId = product.id; showDeleteDialog = true"
+                  <DropdownMenuContent align="end">
+  <!-- Product Edit -->
+  <DropdownMenuItem @click="router.push(`/variant/${product.id}`)">
+    Düzenle
+  </DropdownMenuItem>
+
+  <DropdownMenuSeparator />
+
+  <!-- Product Delete -->
+ <DropdownMenuItem
+@click="openProductDeleteDialog(product.id)"
   class="text-red-600 bg-[#FEF2F2] hover:text-red-600 hover:bg-[#fbd0d0] focus:text-red-600 focus:bg-[#fbd0d0]"
 >
   Sil
 </DropdownMenuItem>
 
+</DropdownMenuContent>
 
 
-                    </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>
               </TableRow>
@@ -422,14 +481,16 @@ const deleteProduct = (id: number | string) => {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem @click="editProduct(variation.id)">Düzenle</DropdownMenuItem>
+                     <DropdownMenuItem @click="editVariation(variation.id, product.id)">Düzenle</DropdownMenuItem>
                       <DropdownMenuSeparator />
 <DropdownMenuItem
-  @click="deleteTargetId = product.id; showDeleteDialog = true"
+@click="openVariantDeleteDialog(variation.id, product.id)"
   class="text-red-600 bg-[#FEF2F2] hover:text-red-600 hover:bg-[#fbd0d0] focus:text-red-600 focus:bg-[#fbd0d0]"
 >
   Sil
 </DropdownMenuItem>
+
+
 
                     </DropdownMenuContent>
                   </DropdownMenu>

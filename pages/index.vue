@@ -27,6 +27,11 @@
 
      <br></br>
       <NuxtLink to="/orderstatus">Go to Update Order Status</NuxtLink>
+       <br></br>
+      <NuxtLink to="/registerlisting">Go to Register Listing</NuxtLink>
+
+      <br></br>
+      <NuxtLink to="/mysale">Go to Register Listing</NuxtLink>
 
     </div>
   </div>

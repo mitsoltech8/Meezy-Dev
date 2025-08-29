@@ -1,268 +1,217 @@
 <script setup lang="ts">
-import { ref, computed } from "vue"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Badge } from "@/components/ui/badge"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { File, ListFilter, MoreHorizontal, X } from "lucide-vue-next"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
-
-// Tabs state
-const selectedTab = ref("week")
-
-// Filter tabs visibility
-const filterTabsVisible = ref(false)
-const filterStatus = ref("all")
-
-// Dummy products
-const products = ref([
-  {
-    id: 1,
-    name: "Yeezy Boost 350 V2 Steel Grey",
-    size: "44 2/3",
-    price: "300",
-    sellerPrice: "12,000,00 TL",
-    status: "Satışta",
-    image: "https://via.placeholder.com/60"
+import { Table, TableHeader, TableHead, TableRow, TableBody, TableCell } from "@/components/ui/table"
+import { Button } from "@/components/ui/button"
+import { Separator } from "@/components/ui/separator"
+import { CreditCard, MoreVertical, Truck } from "lucide-vue-next"
+import { AspectRatio } from "@/components/ui/aspect-ratio"
+import { ref, onMounted } from "vue"
+import { useRoute, useRouter } from "vue-router"
+ 
+const route = useRoute()
+const router = useRouter()
+ 
+// Reactive order data
+const order = ref<any>(null)
+const loading = ref(true)
+const error = ref<string | null>(null)
+ 
+// Fetch order details based on ID from URL
+const fetchOrderDetails = async () => {
+  try {
+    loading.value = true
+    error.value = null
+    const orderId = route.query.orderId as string
+ 
+    if (!orderId) {
+      throw new Error("Sipariş ID bulunamadı")
+    }
+ 
+    console.log("Fetching order:", orderId)
+ 
+    // First try to get from the all orders list
+    try {
+      const allOrdersResponse = await fetch('http://localhost:4000/api/orders')
+      if (allOrdersResponse.ok) {
+        const allOrdersData = await allOrdersResponse.json()
+        const foundOrder = allOrdersData.orders.find((o: any) => o.id == orderId || o.order_number == orderId)
+        if (foundOrder) {
+          order.value = foundOrder
+          console.log("Order found in all orders list")
+          return
+        }
+      }
+    } catch (e) {
+      console.log("Could not fetch all orders list, trying direct endpoint")
+    }
+ 
+    // If not found in all orders, try the direct endpoint
+    const response = await fetch(`http://localhost:4000/api/orders/${orderId}`)
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error(`Sipariş bulunamadı (ID: ${orderId})`)
+      }
+      throw new Error(`Sunucu hatası: ${response.status}`)
+    }
+ 
+    const orderData = await response.json()
+    order.value = orderData.order || orderData
+  } catch (err: any) {
+    console.error("Error fetching order details:", err)
+    error.value = err.message || "Sipariş detayları alınamadı"
+  } finally {
+    loading.value = false
   }
-])
-
-// Dummy orders
-const orders = ref([
-  {
-    id: 1,
-    customer: "Stephanie Sharkey",
-    email: "steph56@gmail.com",
-    type: "Sale",
-    status: "Pending",
-    date: new Date("2025-08-21T06:12:00")
-  },
-  {
-    id: 2,
-    customer: "Ali Khan",
-    email: "ali@example.com",
-    type: "Sale",
-    status: "Completed",
-    date: new Date("2025-08-18T14:45:00")
-  },
-  {
-    id: 3,
-    customer: "John Doe",
-    email: "john@example.com",
-    type: "Refund",
-    status: "Pending",
-    date: new Date("2025-07-10T10:30:00")
+}
+ 
+// Format currency helper
+const formatCurrency = (value: number | string) => {
+  const num = typeof value === "string" ? parseFloat(value) : value
+  if (isNaN(num)) return "N/A"
+  return new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" }).format(num)
+}
+ 
+// Format date helper
+const formatDate = (dateString: string) => {
+  if (!dateString) return "N/A"
+  return new Date(dateString).toLocaleDateString("tr-TR", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  })
+}
+ 
+// Get status text in Turkish
+const getStatusText = (status: string) => {
+  const statusMap: Record<string, string> = {
+    paid: "Ödendi",
+    pending: "Beklemede",
+    refunded: "İade Edildi",
+    cancelled: "İptal Edildi",
   }
-])
-
-// Filtered orders according to main tab + filter status
-const filteredOrders = computed(() => {
-  const now = new Date()
-  let result = [...orders.value]
-
-  // Time filter
-  if (selectedTab.value === "week") {
-    const weekAgo = new Date()
-    weekAgo.setDate(now.getDate() - 7)
-    result = result.filter(o => o.date >= weekAgo)
-  } else if (selectedTab.value === "month") {
-    const monthAgo = new Date()
-    monthAgo.setMonth(now.getMonth() - 1)
-    result = result.filter(o => o.date >= monthAgo)
-  } else if (selectedTab.value === "year") {
-    const yearAgo = new Date()
-    yearAgo.setFullYear(now.getFullYear() - 1)
-    result = result.filter(o => o.date >= yearAgo)
-  }
-
-  // Status filter
-  if (filterStatus.value === "pending") {
-    result = result.filter(o => o.status === "Pending")
-  } else if (filterStatus.value === "completed") {
-    result = result.filter(o => o.status === "Completed")
-  }
-
-  return result
+  return statusMap[status] || status
+}
+ 
+// Calculate order totals
+const calculateTotals = (ord: any) => {
+  if (!ord) return { subtotal: 0, shipping: 0, tax: 0, total: 0 }
+ 
+  const subtotal =
+    ord.line_items?.reduce((sum: number, item: any) => {
+      return sum + (parseFloat(item.price) * item.quantity || 0)
+    }, 0) || 0
+ 
+  const shipping = parseFloat(ord.total_shipping_price_set?.shop_money?.amount || ord.total_shipping_price || "0")
+  const tax = parseFloat(ord.total_tax_set?.shop_money?.amount || ord.total_tax || "0")
+  const total = parseFloat(ord.total_price_set?.shop_money?.amount || ord.total_price || "0")
+ 
+  return { subtotal, shipping, tax, total }
+}
+ 
+onMounted(() => {
+  fetchOrderDetails()
 })
 
-// Handlers for product menu
-const editProduct = (id: number) => {
-  console.log("Edit product:", id)
-}
-
-// Dialog & alert states
-const showDeleteDialog = ref(false)
-const productToDelete = ref<number | null>(null)
-
-// ✅ Alert state
-const showAlert = ref(false)
-const alertMessage = ref("")
-const alertType = ref<"success" | "error">("success")
-
-// helper for showing alert
-const triggerAlert = (msg: string, type: "success" | "error" = "success") => {
-  alertMessage.value = msg
-  alertType.value = type
-  showAlert.value = true
-  setTimeout(() => {
-    showAlert.value = false
-  }, 5000)
-}
-
-// Delete button → open dialog
-const deleteProduct = (id: number) => {
-  productToDelete.value = id
-  showDeleteDialog.value = true
-}
-
-// Confirm remove → close dialog + show alert
-const confirmRemove = () => {
-  if (productToDelete.value !== null) {
-    products.value = products.value.filter(p => p.id !== productToDelete.value)
-    productToDelete.value = null
-    showDeleteDialog.value = false
-
-    triggerAlert("Data Removed Successfully!", "success")
+// Navigate to tracking page
+const navigateToTracking = () => {
+  const orderId = route.query.orderId as string
+  if (orderId) {
+    router.push({
+      path: '/tracking',  // Simple path, no dynamic segments
+      query: { orderId: orderId }  // Pass orderId as query parameter
+    })
+  } else {
+    console.error("Order ID not found for navigation")
   }
 }
 
-// Cancel delete → sirf dialog close kare
-const cancelDelete = () => {
-  showDeleteDialog.value = false
+const getFulfillmentStatusText = (status: string | null) => {
+  if (!status) return "Beklemede" // fallback if null
+  const statusMap: Record<string, string> = {
+    fulfilled: "Tamamlandı",
+    partial: "Kısmen Tamamlandı",
+    unfulfilled: "Beklemede",
+    cancelled: "İptal Edildi"
+  }
+  return statusMap[status] || status
 }
 
-// Close alert manually
-const closeAlert = () => {
-  showAlert.value = false
-}
 </script>
-
 <template>
-  <div class="space-y-6 p-6 relative">
-    <!-- ✅ Slide Alert -->
-    <transition name="slide-down">
-      <div
-        v-if="showAlert"
-        :class="[ 
-          'fixed top-12 right-12 rounded-md shadow-lg text-white px-5 py-5 transition-all flex items-start justify-between',
-          alertType === 'success'
-            ? 'bg-green-500 border border-green-400 text-white'
-            : 'bg-red-500 border border-red-400 text-white'
-        ]"
-      >
-        <span>{{ alertMessage }}</span>
-        <button @click="closeAlert" class="ml-3">
-          <X class="w-4 h-4" />
-        </button>
-      </div>
-    </transition>
-
-    <!-- Top bar -->
-    <div class="flex items-center justify-between">
-      <!-- Tabs -->
-      <Tabs v-model="selectedTab" class="w-auto rounded-sm">
-        <TabsList>
-          <TabsTrigger value="week">Week</TabsTrigger>
-          <TabsTrigger value="month">Month</TabsTrigger>
-          <TabsTrigger value="year">Year</TabsTrigger>
-        </TabsList>
-      </Tabs>
-
-      <!-- Right side -->
-      <div class="flex items-center gap-2">
-        <!-- Filter Tabs (toggle on button click) -->
-        <div v-if="filterTabsVisible" class="mr-2">
-          <Tabs v-model="filterStatus" class="w-auto">
-            <TabsList>
-              <TabsTrigger value="all">All</TabsTrigger>
-              <TabsTrigger value="pending">Pending</TabsTrigger>
-              <TabsTrigger value="completed">Completed</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
-
-        <!-- Buttons -->
-        <Button variant="outline" @click="filterTabsVisible = !filterTabsVisible">
-          <ListFilter />
-            Filter
-        </Button>
-        <Button variant="outline">
-            <File />
-            Export</Button>
-      </div>
+  <div class="max-w-full mx-auto p-6 space-y-6">
+    <!-- Loading -->
+    <div v-if="loading" class="text-center py-8">
+      <p>Yükleniyor...</p>
     </div>
 
-    <!-- Products -->
-    <div class="my-8">
-      <CardHeader class="mb-4">
-        <CardTitle class="text-[24px] leading-[32px] font-semibold text-[#09090B] font-inter">Ürünlerim</CardTitle>
-        <p class="text-sm font-normal leading-5 text-[#71717A] font-inter">
-          Ürünlerinizi yukarıdaki filtreleri kullanarak duruma göre filtreleyebilirsiniz.
-        </p>
-      </CardHeader>
-      <CardContent>
-        <Table class="border-b">
-          <TableHeader>
-            <TableRow>
-              <TableHead>Ürün</TableHead>
-              <TableHead>Beden</TableHead>
-              <TableHead>Fiyat</TableHead>
-              <TableHead>Satıcıya Kalan</TableHead>
-              <TableHead>Durum</TableHead>
-              <TableHead></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            <TableRow v-for="p in products" :key="p.id">
-              <TableCell>
-                <div class="flex items-center gap-4">
-                   <div class="w-16">
-          <AspectRatio :ratio="1/1">
-            <img src="/Aspect Ratio.png" alt="Image" class="rounded-md object-cover w-full h-full">
-          </AspectRatio>
-        </div>
-                  <span>{{ p.name }}</span>
-                </div>
-              </TableCell>
-              <TableCell>{{ p.size }}</TableCell>
-              <TableCell>{{ p.price }}</TableCell>
-              <TableCell>{{ p.sellerPrice }}</TableCell>
-              <TableCell>
-                <Badge variant="outline">{{ p.status }}</Badge>
-              </TableCell>
-              <TableCell class="text-right">
-                <DropdownMenu>
-                  <DropdownMenuTrigger as-child>
-                    <Button variant="ghost" size="icon">
-                      <MoreHorizontal class="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem @click="editProduct(p.id)">
-                      Düzenle
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      @click="deleteProduct(p.id)"
-                      class="text-red-600 bg-[#FEF2F2] hover:text-red-600 hover:bg-[#fbd0d0] focus:text-red-600 focus:bg-[#fbd0d0]"
-                    >
-                      Sil
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-      </CardContent>
+    <!-- Error -->
+    <div v-else-if="error" class="text-center py-8 text-red-600">
+      <p>{{ error }}</p>
+      <Button @click="fetchOrderDetails" class="mt-4">Tekrar Dene</Button>
     </div>
 
-    <!-- Orders -->
-    <Card>
+    <!-- Order -->
+    <div v-else-if="order">
+      <!-- Products -->
+      <Card>
+        <CardHeader>
+          <CardTitle class="text-[#09090B] text-2xl font-semibold">Sipariş Ürünleri</CardTitle>
+          <p class="text-[#71717A] text-sm">Siparişteki ürün detayları</p>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Ürün</TableHead>
+                <TableHead>Beden</TableHead>
+                <TableHead>Adet</TableHead>
+                <TableHead>Birim Fiyat</TableHead>
+                <TableHead>Toplam</TableHead>
+                <TableHead>Durum</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow v-for="item in order.line_items" :key="item.id">
+                <TableCell>
+                  <div class="flex items-center gap-5">
+                    <div class="w-16">
+                      <AspectRatio :ratio="1 / 1">
+                        <img
+                          v-if="item.image?.src || item.product?.images?.[0]?.src"
+                          :src="item.image?.src || item.product?.images?.[0]?.src"
+                          :alt="item.title"
+                          class="rounded-md object-cover w-full h-full"
+                        />
+                        <img
+                          v-else
+                          src="/Aspect Ratio.png"
+                          alt="Ürün resmi yok"
+                          class="rounded-md object-cover w-full h-full"
+                        />
+                      </AspectRatio>
+                    </div>
+                    <span class="font-medium">{{ item.title }}</span>
+                  </div>
+                </TableCell>
+                <TableCell>{{ item.variant_title || "N/A" }}</TableCell>
+                <TableCell>{{ item.quantity }}</TableCell>
+                <TableCell>{{ formatCurrency(item.price) }}</TableCell>
+                <TableCell>{{ formatCurrency(parseFloat(item.price) * item.quantity) }}</TableCell>
+                <TableCell>
+                  <Button size="sm" variant="secondary">{{ getStatusText(order.financial_status) }}</Button>
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+
+
+   <Card>
       <CardHeader>
-        <CardTitle class="font-inter text-[24px] font-semibold leading-8 tracking-[-0.4px] text-[#09090B]" >Orders</CardTitle>
-        <p class="text-[#71717A] font-inter text-sm font-normal leading-5">Recent orders from your store.</p>
+        <CardTitle>Orders</CardTitle>
+        <CardDescription>Recent orders from your store.</CardDescription>
       </CardHeader>
       <CardContent>
         <Table>
@@ -275,76 +224,33 @@ const closeAlert = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            <TableRow v-for="o in filteredOrders" :key="o.id">
-              <TableCell>
-                <div>
-                  <div class="font-medium">{{ o.customer }}</div>
-                  <div class="text-sm text-muted-foreground">{{ o.email }}</div>
-                </div>
-              </TableCell>
-              <TableCell>{{ o.type }}</TableCell>
-              <TableCell>
-                <Badge :variant="o.status === 'Pending' ? 'outline' : 'default'">
-                  {{ o.status }}
-                </Badge>
-              </TableCell>
-              <TableCell>{{ o.date.toLocaleString() }}</TableCell>
-            </TableRow>
-            <TableRow v-if="filteredOrders.length === 0">
-              <TableCell colspan="4" class="text-center text-muted-foreground py-4">
-                No orders found for this filter.
-              </TableCell>
-            </TableRow>
-          </TableBody>
+  <TableRow v-if="order">
+    <TableCell>
+      <span>{{ order.customer?.first_name }} {{ order.customer?.last_name }}</span>
+      <br/>
+      <span>{{ order.customer?.email || order.contact_email || "Bilgi yok" }}</span>
+    </TableCell>
+    <TableCell>Sale</TableCell>
+    <TableCell>
+      <Badge size="sm" variant="outline">
+        {{ getFulfillmentStatusText(order.line_items?.[0]?.fulfillment_status || null) }}
+      </Badge>
+    </TableCell>
+    <TableCell>{{ formatDate(order.created_at) }}</TableCell>
+  </TableRow>
+
+  <!-- Only show when no order exists -->
+  <TableRow v-else>
+    <TableCell colspan="4" class="text-center text-muted-foreground py-4">
+      No orders found for this filter.
+    </TableCell>
+  </TableRow>
+</TableBody>
+
         </Table>
       </CardContent>
     </Card>
 
-    <!-- Divider -->
-    <div class="border-t"></div>
-
-    <!-- Bottom Button -->
-    <div class="flex justify-end">
-      <Button variant="default">Varyant Seç</Button>
     </div>
-
-    <!-- ✅ Delete Dialog -->
-    <Dialog v-model:open="showDeleteDialog">
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle class="text-[#18181B] text-center font-inter text-lg font-semibold leading-none">
-            Remove Listing?
-          </DialogTitle>
-          <DialogDescription class="text-[#71717A] text-center text-sm font-normal leading-5">
-            Are you sure you want to remove listing?
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <Button
-            variant="destructive"
-            @click="confirmRemove"
-            class="w-full rounded-md bg-[#18181B] shadow text-[#FAFAFA] font-medium text-sm leading-5 font-inter"
-          >
-            Remove Listing
-          </Button>
-          
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   </div>
 </template>
-
-<style>
-.slide-down-enter-active,
-.slide-down-leave-active {
-  transition: all 0.3s ease;
-}
-.slide-down-enter-from {
-  opacity: 0;
-  transform: translateX(20px);
-}
-.slide-down-leave-to {
-  opacity: 0;
-  transform: translateX(20px);
-}
-</style>

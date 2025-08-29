@@ -79,12 +79,12 @@
                 class="w-full flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-[#f5f5f5] transition select-none text-left"
               >
                 <Avatar class="h-8 w-8 shrink-0 rounded-lg">
-                  <AvatarImage :src="user.avatar" alt="avatar" />
-                  <AvatarFallback>{{ user.initials }}</AvatarFallback>
+                  <AvatarImage :src="userData.avatar || user.avatar" alt="avatar" />
+                  <AvatarFallback>{{ userData.initials || user.initials }}</AvatarFallback>
                 </Avatar>
                 <div class="min-w-0 flex-1">
-                  <div class="text-sm font-medium leading-5 truncate">{{ user.name }}</div>
-                  <div class="text-xs text-black-300 truncate">{{ user.email }}</div>
+                  <div class="text-sm font-medium leading-5 truncate">{{ userData.name || user.name }}</div>
+                  <div class="text-xs text-black-300 truncate">{{ userData.email || user.email }}</div>
                 </div>
                 <ChevronsUpDown class="h-4 w-4 opacity-70" />
               </button>
@@ -101,12 +101,12 @@
               <!-- Header inside popup -->
               <div class="flex items-center gap-3 p-3">
                 <Avatar class="h-10 w-10 shrink-0">
-                  <AvatarImage :src="user.avatar" alt="avatar" />
-                  <AvatarFallback>{{ user.initials }}</AvatarFallback>
+                  <AvatarImage :src="userData.avatar || user.avatar" alt="avatar" />
+                  <AvatarFallback>{{ userData.initials || user.initials }}</AvatarFallback>
                 </Avatar>
                 <div class="min-w-0">
-                  <div class="text-sm font-medium truncate">{{ user.name }}</div>
-                  <div class="text-xs text-muted-foreground truncate">{{ user.email }}</div>
+                  <div class="text-sm font-medium truncate">{{ userData.name || user.name }}</div>
+                  <div class="text-xs text-muted-foreground truncate">{{ userData.email || user.email }}</div>
                 </div>
               </div>
               <Separator />
@@ -132,7 +132,7 @@
               </DropdownMenuItem>
 
               <Separator />
-              <DropdownMenuItem class="gap-2 py-2.5 text-red-500 focus:text-red-500">
+              <DropdownMenuItem class="gap-2 py-2.5 text-red-500 focus:text-red-500" @click="logout">
                 <LogOut class="h-4 w-4" />
                 <span>Log out</span>
               </DropdownMenuItem>
@@ -147,7 +147,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue"
+import { ref, onMounted, computed } from "vue"
 import {
   Calendar, Home, Inbox, Search, Settings,
   ChevronsUpDown, Sparkles, User, CreditCard, Bell, LogOut,
@@ -176,7 +176,7 @@ const items = [
     title: "Satışlarım", url: "#", icon: ShoppingCart,
     children: [{ title: "Aktif", url: "#" }, { title: "Tamamlanan", url: "#" }, { title: "İptal Edilen", url: "#" }]
   },
-  { title: "Ürünlerim", url: "#", icon: Package,
+  { title: "Ürünlerim", url: "/products", icon: Package,
     children: [{ title: "Satışta", url: "#" }, { title: "Onay Bekleyen", url: "#" }, { title: "Askıda", url: "#" }]
 },
   {
@@ -195,13 +195,48 @@ function toggleSubmenu(index: number) {
   }
 }
 
-// footer user data
+// footer user data - default values
 const user = {
   name: "shadcn",
   email: "m@example.com",
   avatar: "https://i.pravatar.cc/80?img=3",
   get initials() { return this.name.slice(0, 2).toUpperCase() }
 }
+
+// Reactive user data from localStorage
+const userData = ref({
+  name: "",
+  email: "",
+  avatar: "",
+  get initials() { return this.name ? this.name.slice(0, 2).toUpperCase() : "US" }
+})
+
+// Get user data from localStorage
+const getUserData = () => {
+  try {
+    const storedUser = localStorage.getItem('auth_user')
+    if (storedUser) {
+      const parsedUser = JSON.parse(storedUser)
+      userData.value.name = parsedUser.name || parsedUser.firstName + ' ' + parsedUser.lastName || ''
+      userData.value.email = parsedUser.email || ''
+      // You can add more fields as needed
+    }
+  } catch (error) {
+    console.error('Error retrieving user data:', error)
+  }
+}
+
+// Logout function
+const logout = () => {
+  localStorage.removeItem('auth_token')
+  localStorage.removeItem('auth_user')
+  window.location.href = '/login' // Redirect to login page
+}
+
+// Get user data when component is mounted
+onMounted(() => {
+  getUserData()
+})
 </script>
 
 <style scoped>
@@ -215,4 +250,3 @@ li svg{
   width: 16px;
 }
 </style>
-
