@@ -32,7 +32,7 @@
                   @click.prevent="item.children.length && toggleSubmenu(index)"
                   class="flex items-center justify-between px-2 py-2 rounded cursor-pointer select-none"
                 >
-                  <a :href="item.url" class="flex items-center gap-2 flex-1" @click.stop>
+                  <a :href="item.url" class="flex items-center gap-2 flex-1" >
                     <div class="flex items-center gap-2 flex-1">
                       <component :is="item.icon" class="w-5 h-5" />
                       <span class="truncate overflow-hidden text-[#3F3F46] text-ellipsis font-inter text-sm font-normal leading-none">{{ item.title }}</span>
@@ -154,7 +154,8 @@ import {
   ShoppingCart,
   Package,
   Settings2,
-  UserCog
+  UserCog,
+  List
 } from "lucide-vue-next"
 
 import {
@@ -174,19 +175,20 @@ const items = [
   { title: "Ana Sayfa", url: "#", icon: Home, children: [] },
   {
     title: "Satışlarım", url: "#", icon: ShoppingCart,
-    children: [{ title: "Aktif", url: "#" }, { title: "Tamamlanan", url: "#" }, { title: "İptal Edilen", url: "#" }]
+    children: [{ title: "Aktif", url: "/mysale" }, { title: "Tamamlanan", url: "#" }, { title: "İptal Edilen", url: "#" }]
   },
-  { title: "Ürünlerim", url: "/products", icon: Package,
-    children: [{ title: "Satışta", url: "#" }, { title: "Onay Bekleyen", url: "#" }, { title: "Askıda", url: "#" }]
+  { title: "Ürünlerim", url: "#", icon: Package,
+    children: [{ title: "Satışta", url: "/products?tab=satis" }, { title: "Onay Bekleyen", url: "/products?tab=onay" }, { title: "Askıda", url: "#" }]
 },
   {
     title: "Ayarlarım", url: "#", icon: Settings2,
     children: [{ title: "Bildirimler", url: "#" }, { title: "Tatil Modu", url: "#" }]
   },
   { title: "Satıcı Bilgilerim", url: "#", icon: UserCog, children: [] },
+  { title: "İlan Kaydı", url: "/registerlisting", icon: List, children: [] },
 ]
 
-const openIndexes = ref<number[]>([])
+const openIndexes = ref<number[]>([1, 2, 3])
 function toggleSubmenu(index: number) {
   if (openIndexes.value.includes(index)) {
     openIndexes.value = openIndexes.value.filter(i => i !== index)

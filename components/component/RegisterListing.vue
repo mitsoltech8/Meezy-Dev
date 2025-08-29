@@ -1,5 +1,5 @@
 <template>
-  <div class="p-6 space-y-6 relative">
+  <div class=" space-y-6 relative">
     <!-- Top Right Buttons + Tabs -->
     <div class="flex justify-end items-center space-x-2">
       <!-- Tabs (Filter ke left side par) -->
@@ -20,10 +20,14 @@
           <ListFilter />
           Filter
         </Button>
-        <Button class="bg-black text-white hover:bg-black">
-          <Cross />
-          Ürün Ekle
-        </Button>
+         <NuxtLink to="/searchform">
+  <NuxtLink to="/searchform">
+  <Button class="flex items-center gap-2">
+    <Cross />
+    Ürün Ekle
+  </Button>
+</NuxtLink>
+</NuxtLink>
       </div>
     </div>
 
@@ -86,12 +90,17 @@
                 <div class="flex items-center space-x-3">
                   <div class="w-16">
                     <AspectRatio :ratio="1/1">
-                      <img 
-                        :src="filteredProduct.image || filteredProduct.images?.[0]?.src || '/Aspect Ratio.png'" 
-                        :alt="filteredProduct.title || filteredProduct.name" 
-                        class="rounded-md object-cover w-full h-full"
-                      >
-                    </AspectRatio>
+  <img
+    :src="filteredProduct.image
+            ? filteredProduct.image
+            : filteredProduct.images?.[0]?.src
+            ? filteredProduct.images[0].src
+            : '/Aspect Ratio.png'"
+    :alt="filteredProduct.title || filteredProduct.name || 'Fallback Image'"
+    class="w-full h-full object-cover rounded-md"
+  />
+</AspectRatio>
+
                   </div>
                   <span>{{ filteredProduct.title || filteredProduct.name }}</span>
                 </div>

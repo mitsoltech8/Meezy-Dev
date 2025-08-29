@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableHeader, TableHead, TableRow, TableBody, TableCell } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { CreditCard, MoreVertical, Truck } from "lucide-vue-next"
+import { CreditCard, Cross, ListFilter, MoreVertical, Truck } from "lucide-vue-next"
 import { AspectRatio } from "@/components/ui/aspect-ratio"
 import { ref, onMounted } from "vue"
 import { useRoute, useRouter } from "vue-router"
@@ -124,9 +124,61 @@ const navigateToTracking = () => {
     console.error("Order ID not found for navigation")
   }
 }
+
+// ✅ Tabs show/hide state
+const showTabs = ref(false)
+
+// ✅ Filter state
+const selectedDurum = ref("hepsi")
+// ✅ Durum list
+const durumList = [
+  { key: "hepsi", label: "Hepsi" },
+  { key: "paid", label: "Ödendi" },
+  { key: "pending", label: "Beklemede" },
+  { key: "refunded", label: "Refund" }
+]
+
+
+
+const handleDurumChange = (val: string) => {
+  selectedDurum.value = val
+}
 </script>
 <template>
+  
   <div class="max-w-full mx-auto p-6 space-y-6">
+     <div class="flex justify-end items-center gap-3 mb-4">
+      <!-- Tabs (Filter button ke left side, by default hidden) -->
+      <div v-if="showTabs">
+        <Tabs v-model="selectedDurum">
+          <TabsList>
+            <TabsTrigger
+              v-for="item in durumList"
+              :key="item.key"
+              :value="item.key"
+              @click="handleDurumChange(item.key)"
+            >
+              {{ item.label }}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+
+      <!-- Filter Button -->
+      <Button variant="outline" @click="showTabs = !showTabs">
+        <ListFilter />
+        Filter
+      </Button>
+
+      <!-- Ürün Ekle Button -->
+        <NuxtLink to="/searchform">
+  <Button class="flex items-center gap-2">
+   <Cross />
+    Ürün Ekle
+  </Button>
+</NuxtLink>
+      
+    </div>
     <!-- Loading -->
     <div v-if="loading" class="text-center py-8">
       <p>Yükleniyor...</p>
@@ -195,8 +247,8 @@ const navigateToTracking = () => {
       </Card>
 
       <!-- Order Summary -->
-      <Card>
-        <div class="flex items-center justify-between bg-[#F4F4F5] p-6">
+
+        <div class="flex items-center justify-between bg-[#F4F4F5] p-6 mt-8">
           <div>
             <h2 class="text-lg font-semibold">
               Sipariş #{{ order.order_number || order.name }}
@@ -304,11 +356,18 @@ const navigateToTracking = () => {
 
           <Separator class="my-2" />
 
-          <div class="flex justify-end pt-3">
-<Button @click="navigateToTracking">Varyant Seç</Button>
+          <div class="flex justify-end pt-3 gap-3">
+  <!-- Back Button -->
+  <Button variant="outline" @click="router.back()">
+    Geri
+  </Button>
+
+  <!-- Sipariş Takip Button -->
+  <Button @click="navigateToTracking">Sipariş Takip</Button>
 </div>
+
         </CardContent>
-      </Card>
+
     </div>
   </div>
 </template>

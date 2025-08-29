@@ -10,7 +10,8 @@ import {
   DropdownMenuItem, DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu"
 import {
-  MoreHorizontal, ChevronDown, ChevronRight, CornerRightDown, ListFilter, Plus
+  MoreHorizontal, ChevronDown, ChevronRight, CornerRightDown, ListFilter, Plus,
+  Cross
 } from "lucide-vue-next"
 
 import { useRouter } from 'vue-router'
@@ -163,7 +164,7 @@ const triggerAlert = () => {
 const deleteProduct = async (productId: number | string) => {
   try {
     const config = useRuntimeConfig()
-    const response: any = await $fetch(`${config.public.baseURL}/products/${productId}`, {
+    await $fetch(`${config.public.baseURL}/products/${productId}`, {
       method: 'DELETE'
     })
 
@@ -178,20 +179,24 @@ const deleteProduct = async (productId: number | string) => {
   triggerAlert()
 }
 
-// Delete variant
+// Delete variant (Corrected)
 const deleteVariant = async (variantId: number | string, productId: number | string) => {
   try {
     const config = useRuntimeConfig()
-    const response: any = await $fetch(`${config.public.baseURL}/variants/${variantId}`, {
+    await $fetch(`${config.public.baseURL}/products/variants/${variantId}`, { // <-- correct URL
       method: 'DELETE'
     })
 
     const product = allProducts.value.find(p => p.id === productId)
     if (product) {
       product.variations = product.variations.filter(v => v.id !== variantId)
-      if (product.variations.length > 0) {
-        product.size = product.variations[0].size
-        product.priceMin = Math.min(...product.variations.map(v => parsePrice(v.price) || 0))
+
+      if (product.variations.length > 0 && product.variations[0]) {
+        product.size = product.variations[0]?.size || ""
+        const prices = product.variations
+          .map(v => parsePrice(v.price))
+          .filter(n => n !== null)
+        product.priceMin = prices.length > 0 ? Math.min(...prices) : null
       } else {
         allProducts.value = allProducts.value.filter(p => p.id !== productId)
       }
@@ -207,6 +212,7 @@ const deleteVariant = async (variantId: number | string, productId: number | str
   triggerAlert()
 }
 
+
 // Confirm delete
 const confirmDelete = async () => {
   showDeleteDialog.value = false
@@ -218,7 +224,6 @@ const confirmDelete = async () => {
     await deleteVariant(deleteTargetId.value, deleteTargetProductId.value)
   }
 
-  // Reset
   deleteTargetId.value = null
   deleteTargetType.value = null
   deleteTargetProductId.value = null
@@ -254,15 +259,24 @@ const openVariantDeleteDialog = (variantId: number | string, productId: number |
 const editVariation = (variationId: number | string, productId: number | string) => {
   router.push(`/variant/${productId}/${variationId}`)
 }
+import { useRoute } from 'vue-router'
+const route = useRoute()
+
+onMounted(() => {
+  const tab = route.query.tab
+  if (tab === "onay") activeTab.value = "onay"
+  else activeTab.value = "satis"
+})
 </script>
 
 
+
 <template>
-<transition name="slide-fade">
+<transition name="slide-fade z-999">
   <div
     v-if="showAlert"
     :class="[ 
-      'fixed top-12  right-12 rounded-md shadow-lg text-white px-6 py-6 transition-all flex items-start justify-between z-99',
+      'fixed top-12  right-12 rounded-md shadow-lg text-white px-6 py-6 transition-all flex items-start justify-between z-999',
       alertType === 'success' ? 'bg-green-600' : 'bg-red-600'
     ]"
     style="width: 350px;"
@@ -283,26 +297,17 @@ const editVariation = (variationId: number | string, productId: number | string)
     <!-- Header Actions -->
     <div class="flex justify-between items-center mb-2.5">
       <!-- Tab Switcher -->
-      <div class="relative flex bg-gray-100 rounded-lg p-1 w-[260px] overflow-hidden">
-        <div
-          class="absolute top-1 bottom-1 w-1/2 bg-white rounded-lg shadow transition-all duration-300"
-          :class="activeTab === 'satis' ? 'left-1' : 'left-[calc(50%+4px)]'"
-        />
-        <button
-          class="z-10 w-1/2 text-center py-2 font-medium transition-colors"
-          :class="activeTab === 'satis' ? 'text-black' : 'text-gray-500'"
-          @click="activeTab = 'satis'"
-        >
-          Satışta
-        </button>
-        <button
-          class="z-10 w-1/2 text-center py-2 font-medium transition-colors"
-          :class="activeTab === 'onay' ? 'text-black' : 'text-gray-500'"
-          @click="activeTab = 'onay'"
-        >
-          Onay Bekleyen
-        </button>
-      </div>
+      <Tabs v-model="activeTab">
+  <TabsList >
+    <TabsTrigger value="satis" >
+      Satışta
+    </TabsTrigger>
+    <TabsTrigger value="onay" >
+      Onay Bekleyen
+    </TabsTrigger>
+  </TabsList>
+</Tabs>
+
 
 <!-- Header Actions -->
 <div class="flex justify-between items-start mb-2.5 gap-4">
@@ -333,7 +338,7 @@ const editVariation = (variationId: number | string, productId: number | string)
 
     <NuxtLink to="/searchform">
   <Button class="flex items-center gap-2">
-    <Plus class="w-4 h-4" />
+    <Cross />
     Ürün Ekle
   </Button>
 </NuxtLink>

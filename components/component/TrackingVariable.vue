@@ -6,7 +6,7 @@
         <ArrowLeft class="w-5 h-5" />
       </button>
       <div>
-        <h1 class="text-[#09090B] text-2xl font-semibold">Sipariş Takip: #{{ order?.order_number || order?.name }}</h1>
+        <h1 class="text-[#09090B] text-2xl font-semibold">Sipariş Takip: {{ order?.order_number || order?.name }}</h1>
         <p class="text-[#71717A] text-sm">Sipariş durumu ve performans takibi</p>
       </div>
     </div>
@@ -50,7 +50,7 @@
                     <div class="w-16">
                       <AspectRatio :ratio="1/1">
                         <img 
-                          :src="item.image?.src || item.product?.images?.[0]?.src || 'https://via.placeholder.com/150x150.png?text=Ürün'" 
+                          :src="item.image?.src || item.product?.images?.[0]?.src || '/Aspect Ratio.png'" 
                           :alt="item.title" 
                           class="rounded-md object-cover w-full h-full" 
                         />
@@ -77,7 +77,7 @@
       <!-- Performance Card -->
       <div class="rounded-lg border border-[#E4E4E7] bg-white shadow-sm p-6">
         <!-- Top Section -->
-        <div class="flex justify-between mb-4">
+        <div class="flex justify-between mb-4 w-1/2">
           <div>
             <p class="text-[#71717A] text-sm font-normal">Toplam Satış</p>
             <div class="flex items-end gap-1">
@@ -100,61 +100,7 @@
         </div>
       </div>
 
-      <!-- Order Details Card -->
-      <Card>
-        <CardHeader class="bg-[#F4F4F5]">
-          <div class="flex items-center justify-between">
-            <div>
-              <CardTitle class="text-[#09090B] text-lg font-semibold">Sipariş {{ order.order_number || order.name }}</CardTitle>
-              <CardDescription class="text-[#71717A] text-sm">
-                Tarih: {{ formatDate(order.created_at) }}
-              </CardDescription>
-            </div>
-            <div class="flex items-center gap-3">
-              <div class="rounded border border-[#E4E4E7] bg-white shadow-sm p-1.5">
-                <Truck class="w-4 h-4" />
-              </div>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent class="p-6 space-y-4">
-          <!-- Order Summary -->
-          <div>
-            <h3 class="text-[#09090B] text-sm font-semibold mb-3">Sipariş Özeti</h3>
-            <div class="space-y-2">
-              <div v-for="item in order.line_items" :key="item.id" class="flex justify-between text-sm">
-                <span class="text-[#71717A]">{{ item.title }} x{{ item.quantity }}</span>
-                <span class="text-[#09090B]">{{ formatCurrency(parseFloat(item.price) * item.quantity) }}</span>
-              </div>
-              <div class="flex justify-between text-sm pt-2 border-t">
-                <span class="text-[#71717A] font-medium">Toplam</span>
-                <span class="text-[#09090B] font-medium">{{ formatCurrency(order.total_price) }}</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Customer Info -->
-          <div>
-            <h3 class="text-[#09090B] text-sm font-semibold mb-3">Müşteri Bilgileri</h3>
-            <div class="text-sm text-[#71717A] space-y-1">
-              <p>{{ order.customer?.first_name }} {{ order.customer?.last_name }}</p>
-              <p>{{ order.customer?.email || order.contact_email }}</p>
-              <p>{{ order.shipping_address?.phone || order.customer?.phone }}</p>
-            </div>
-          </div>
-
-          <!-- Shipping Address -->
-          <div>
-            <h3 class="text-[#09090B] text-sm font-semibold mb-3">Teslimat Adresi</h3>
-            <div class="text-sm text-[#71717A]">
-              <p>{{ order.shipping_address?.address1 }}</p>
-              <p>{{ order.shipping_address?.city }} {{ order.shipping_address?.zip }}</p>
-              <p>{{ order.shipping_address?.country }}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
+    
       <!-- Action Button -->
       <div class="border-t pt-6 flex justify-end">
 <Button 

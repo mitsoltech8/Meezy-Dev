@@ -1,164 +1,192 @@
 <script setup lang="ts">
-import { ref } from "vue"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { ref, computed, onMounted, nextTick } from "vue"
+import { useRoute, useRouter } from "vue-router"
 import { Badge } from "@/components/ui/badge"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { File, ListFilter, MoreHorizontal, X } from "lucide-vue-next"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Progress } from "@/components/ui/progress"   // ✅ Progress import
+import { Button } from "@/components/ui/button"
+import { ListFilter, File } from "lucide-vue-next"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { Progress } from "@/components/ui/progress"
 
-// Filter tabs visibility
+// Route
+const route = useRoute()
+const router = useRouter()
+
+// Data
+const order = ref<any>(null)
+const loading = ref(true)
+const error = ref<string | null>(null)
+
+// Filter
 const filterTabsVisible = ref(false)
-const filterStatus = ref("all")
+const filterStatus = ref<'all' | 'pending' | 'completed'>('all')
 
-// Dummy products
-const products = ref([
-  {
-    id: 1,
-    name: "Yeezy Boost 350 V2 Steel Grey",
-    size: "44 2/3",
-    price: "300",
-    sellerPrice: "12,000,00 TL",
-    status: "Pending",
-    image: "https://via.placeholder.com/60"
-  }
-])
-
-// Handlers for product menu
-const editProduct = (id: number) => {
-  console.log("Edit product:", id)
-}
-
-// Dialog & alert states
-const showDeleteDialog = ref(false)
-const productToDelete = ref<number | null>(null)
-
-// ✅ Alert state
-const showAlert = ref(false)
-const alertMessage = ref("")
-const alertType = ref<"success" | "error">("success")
-
-// helper for showing alert
-const triggerAlert = (msg: string, type: "success" | "error" = "success") => {
-  alertMessage.value = msg
-  alertType.value = type
-  showAlert.value = true
-  setTimeout(() => {
-    showAlert.value = false
-  }, 5000)
-}
-
-// Delete button → open dialog
-const deleteProduct = (id: number) => {
-  productToDelete.value = id
-  showDeleteDialog.value = true
-}
-
-// Confirm remove → close dialog + show alert
-const confirmRemove = () => {
-  if (productToDelete.value !== null) {
-    products.value = products.value.filter(p => p.id !== productToDelete.value)
-    productToDelete.value = null
-    showDeleteDialog.value = false
-    triggerAlert("Data Removed Successfully!", "success")
-  }
-}
-
-// Cancel delete → sirf dialog close kare
-const cancelDelete = () => {
-  showDeleteDialog.value = false
-}
-
-// Close alert manually
-const closeAlert = () => {
-  showAlert.value = false
-}
-
-// ✅ Processing Dialog states
+// Dialog & Progress
 const isProcessing = ref(false)
 const progress = ref(0)
 
-const startProcessing = () => {
-  isProcessing.value = true
-  progress.value = 0
+// Fetch order details
+const fetchOrderDetails = async () => {
+  try {
+    loading.value = true
+    error.value = null
 
-  const interval = setInterval(() => {
-    if (progress.value < 100) {
-      progress.value += 10
-    } else {
-      clearInterval(interval)
-      isProcessing.value = false
+    const orderId = route.query.orderId as string
+    if (!orderId) throw new Error("Sipariş ID bulunamadı")
 
-      // ✅ success or error check
-      const isSuccess = Math.random() > 0.3 // 70% success chance
-      if (isSuccess) {
-        triggerAlert("Veriler Başarıyla Kaydedildi!", "success")
-        // update product status
-        products.value = products.value.map(p =>
-          p.status === "Pending" ? { ...p, status: "Completed" } : p
-        )
-      } else {
-        triggerAlert("Something went wrong. Please try again!", "error")
+    const allOrdersResponse = await fetch('http://localhost:4000/api/orders')
+    if (allOrdersResponse.ok) {
+      const allOrdersData = await allOrdersResponse.json()
+      const foundOrder = allOrdersData.orders.find((o: any) => o.id == orderId || o.order_number == orderId)
+      if (foundOrder) {
+        order.value = foundOrder
+        return
       }
     }
-  }, 300) // har 300ms me +10%
+
+    const response = await fetch(`http://localhost:4000/api/orders/${orderId}`)
+    if (!response.ok) throw new Error(`Sipariş bulunamadı (ID: ${orderId})`)
+    const orderData = await response.json()
+    order.value = orderData.order || orderData
+  } catch (err: any) {
+    error.value = err.message || "Sipariş detayları alınamadı"
+  } finally {
+    loading.value = false
+  }
 }
+
+// Helpers
+const formatCurrency = (value: number | string) => {
+  const num = typeof value === "string" ? parseFloat(value) : value
+  if (isNaN(num)) return "N/A"
+  return new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" }).format(num)
+}
+
+const getFulfillmentStatusText = (status: string | null) => {
+  if (!status) return "Beklemede"
+  const statusMap: Record<string, string> = {
+    fulfilled: "Tamamlandı",
+    partial: "Kısmen Tamamlandı",
+    unfulfilled: "Beklemede",
+    cancelled: "İptal Edildi"
+  }
+  return statusMap[status] || status
+}
+
+// Computed filtered line items
+const filteredLineItems = computed(() => {
+  if (!order.value) return []
+  const lineItems = order.value.line_items || []
+  if (filterStatus.value === 'all') return lineItems
+  if (filterStatus.value === 'completed') return lineItems.filter((item: any) => item.fulfillment_status === 'fulfilled')
+  if (filterStatus.value === 'pending') return lineItems.filter((item: any) => item.fulfillment_status !== 'fulfilled')
+  return lineItems
+})
+
+// Update fulfillment status
+const updateOrderStatus = async (orderId: string) => {
+  if (!order.value) return
+  const lineItems = order.value.line_items || []
+  const anyPending = lineItems.some((item: any) => item.fulfillment_status !== "fulfilled")
+  if (!anyPending) {
+    // alert("Bu siparişin durumu zaten tamamlandı.") // ⚡ comment out alert
+    return
+  }
+
+  let interval: any = null
+
+  try {
+    // Dialog trigger
+    isProcessing.value = true
+    progress.value = 0
+
+    // Fake progress animation
+    interval = setInterval(() => {
+      if (progress.value < 90) progress.value += 10
+    }, 100)
+
+    // API call
+    const response = await fetch(`http://localhost:4000/api/orders/${orderId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        line_items: lineItems.map((item: any) => ({
+          id: item.id,
+          fulfillment_status: "fulfilled"
+        }))
+      }),
+    })
+
+    if (!response.ok) {
+      // alert("Sipariş durumu güncellenemedi") ⚡ comment out alert
+      return
+    }
+
+    const updatedOrder = await response.json()
+    order.value = updatedOrder.order || updatedOrder
+
+    progress.value = 100
+    clearInterval(interval)
+
+    setTimeout(() => {
+      isProcessing.value = false
+      // alert("Tüm sipariş ürünleri başarıyla tamamlandı!") ⚡ comment out alert
+    }, 300)
+
+  } catch (err: any) {
+    progress.value = 100
+    isProcessing.value = false
+    if (interval) clearInterval(interval)
+    // alert(err.message || "Bir hata oluştu") ⚡ comment out alert
+  }
+}
+
+
+
+
+
+onMounted(async () => {
+  await nextTick()
+  fetchOrderDetails()
+})
 </script>
 
+
 <template>
-  <div class="space-y-6 p-6 relative">
-    <!-- ✅ Slide Alert -->
-    <transition name="slide-down">
-      <div
-        v-if="showAlert"
-        :class="[ 
-          'fixed top-12 right-12 rounded-md shadow-lg text-white px-5 py-5 transition-all flex items-start justify-between z-50',
-          alertType === 'success'
-            ? 'bg-green-500 border border-green-400 text-white'
-            : 'bg-red-500 border border-red-400 text-white'
-        ]"
-      >
-        <span>{{ alertMessage }}</span>
-        <button @click="closeAlert" class="ml-3">
-          <X class="w-4 h-4" />
-        </button>
-      </div>
-    </transition>
+<div class="max-w-full mx-auto space-y-6 mt-6">
 
-    <!-- Top bar -->
-    <div class="flex items-center justify-end">
-      <div class="flex items-center gap-2">
-        <div v-if="filterTabsVisible" class="mr-2">
-          <Tabs v-model="filterStatus" class="w-auto">
-            <TabsList>
-              <TabsTrigger value="all">All</TabsTrigger>
-              <TabsTrigger value="pending">Pending</TabsTrigger>
-              <TabsTrigger value="completed">Completed</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
+  <!-- Loading -->
+  <div v-if="loading" class="text-center py-8">Yükleniyor...</div>
 
-        <Button variant="outline" @click="filterTabsVisible = !filterTabsVisible">
-          <ListFilter />
-          Filter
-        </Button>
-        <Button variant="outline">
-          <File />
-          Export
-        </Button>
+  <!-- Error -->
+  <div v-else-if="error" class="text-center py-8 text-red-600">{{ error }}</div>
+
+  <!-- Order Details -->
+  <div v-else-if="order">
+
+    <!-- Right: Status filter + button -->
+    <div class="flex items-center gap-2 mb-4 justify-end">
+      <div v-if="filterTabsVisible">
+        <Tabs v-model:value="filterStatus" :default-value="filterStatus" class="w-auto">
+          <TabsList>
+            <TabsTrigger value="all">All</TabsTrigger>
+            <TabsTrigger value="pending">Pending</TabsTrigger>
+            <TabsTrigger value="completed">Completed</TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
+      <Button variant="outline" @click="filterTabsVisible = !filterTabsVisible" class="flex items-center gap-1">
+        <ListFilter /> Filter
+      </Button>
+      <Button variant="outline">
+       <File />
+          Export</Button>
     </div>
 
-    <!-- Products -->
-    <div class="my-8">
-      <CardHeader class="mb-4">
+    <!-- Products Table -->
+    <div class="py-8">
+      <CardHeader class="mb-8">
         <CardTitle class="text-[24px] leading-[32px] font-semibold text-[#09090B] font-inter">Processing Status</CardTitle>
-        <p class="text-sm font-normal leading-5 text-[#71717A] font-inter">
-          Ürünlerinizi yukarıdaki filtreleri kullanarak duruma göre filtreleyebilirsiniz.
-        </p>
+        <CardDescription class="text-sm font-normal leading-5 text-[#71717A] font-inter">Ürünlerinizi yukarıdaki filtreleri kullanarak duruma göre filtreleyebilirsiniz.</CardDescription>
       </CardHeader>
       <CardContent>
         <Table class="border-b">
@@ -166,49 +194,37 @@ const startProcessing = () => {
             <TableRow>
               <TableHead>Ürün</TableHead>
               <TableHead>Beden</TableHead>
-              <TableHead>Fiyat</TableHead>
-              <TableHead>Satıcıya Kalan</TableHead>
-              <TableHead>Durum</TableHead>
-              <TableHead></TableHead>
+              <TableHead>Adet</TableHead>
+              <TableHead>Birim Fiyat</TableHead>
+              <TableHead>Toplam</TableHead>
+              <TableHead>Durum</TableHead> <!-- Ye ab fulfillment_status show karega -->
             </TableRow>
           </TableHeader>
           <TableBody>
-            <TableRow v-for="p in products" :key="p.id">
+            <TableRow v-for="item in filteredLineItems" :key="item.id">
               <TableCell>
-                <div class="flex items-center gap-4">
+                <div class="flex items-center gap-5">
                   <div class="w-16">
-                    <AspectRatio :ratio="1/1">
-                      <img src="/Aspect Ratio.png" alt="Image" class="rounded-md object-cover w-full h-full" />
+                    <AspectRatio :ratio="1 / 1">
+                      <img v-if="item.image?.src || item.product?.images?.[0]?.src"
+                        :src="item.image?.src || item.product?.images?.[0]?.src"
+                        :alt="item.title"
+                        class="rounded-md object-cover w-full h-full"
+                      />
+                      <img v-else src="/Aspect Ratio.png" alt="Ürün resmi yok" class="rounded-md object-cover w-full h-full"/>
                     </AspectRatio>
                   </div>
-                  <span>{{ p.name }}</span>
+                  <span class="font-medium">{{ item.title }}</span>
                 </div>
               </TableCell>
-              <TableCell>{{ p.size }}</TableCell>
-              <TableCell>{{ p.price }}</TableCell>
-              <TableCell>{{ p.sellerPrice }}</TableCell>
+              <TableCell>{{ item.variant_title || "N/A" }}</TableCell>
+              <TableCell>{{ item.quantity }}</TableCell>
+              <TableCell>{{ formatCurrency(item.price) }}</TableCell>
+              <TableCell>{{ formatCurrency(parseFloat(item.price) * item.quantity) }}</TableCell>
               <TableCell>
-                <Badge variant="outline">{{ p.status }}</Badge>
-              </TableCell>
-              <TableCell class="text-right">
-                <DropdownMenu>
-                  <DropdownMenuTrigger as-child>
-                    <Button variant="ghost" size="icon">
-                      <MoreHorizontal class="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem @click="editProduct(p.id)">
-                      Düzenle
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      @click="deleteProduct(p.id)"
-                      class="text-red-600 bg-[#FEF2F2] hover:text-red-600 hover:bg-[#fbd0d0] focus:text-red-600 focus:bg-[#fbd0d0]"
-                    >
-                      Sil
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <Badge size="sm" :variant="item.fulfillment_status === 'fulfilled' ? 'default' : 'outline'" class="font-semibold">
+                  {{ getFulfillmentStatusText(item.fulfillment_status) }}
+                </Badge>
               </TableCell>
             </TableRow>
           </TableBody>
@@ -216,62 +232,32 @@ const startProcessing = () => {
       </CardContent>
     </div>
 
-    <div class="border-t"></div>
+     <div class="border-t my-6"></div>
 
-    <!-- Bottom Button -->
-    <div class="flex justify-end">
-      <Button variant="default" @click="startProcessing">Varyant Seç</Button>
-    </div>
+    <!-- Bottom Buttons -->
+    <!-- Bottom Buttons -->
+<div class="flex justify-end gap-6">
+  <Button variant="outline" @click="router.back()">Geri</Button>
 
-    <!-- ✅ Processing Dialog -->
-    <Dialog v-model:open="isProcessing">
-      <DialogContent class="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle class="text-[#18181B] text-center text-lg font-semibold leading-none">Processing</DialogTitle>
-          <DialogDescription class="text-center text-sm font-normal leading-5 text-[#71717A]">
-            Your order is being processed
-          </DialogDescription>
-        </DialogHeader>
-        <Progress :model-value="progress" class="w-full h-2" />
-      </DialogContent>
-    </Dialog>
-
-    <!-- ✅ Delete Dialog -->
-    <Dialog v-model:open="showDeleteDialog">
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle class="text-[#18181B] text-center font-inter text-lg font-semibold leading-none">
-            Remove Listing?
-          </DialogTitle>
-          <DialogDescription class="text-[#71717A] text-center text-sm font-normal leading-5">
-            Are you sure you want to remove listing?
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <Button
-            variant="destructive"
-            @click="confirmRemove"
-            class="w-full rounded-md bg-[#18181B] shadow text-[#FAFAFA] font-medium text-sm leading-5 font-inter"
-          >
-            Remove Listing
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  </div>
+  <Button
+    class="bg-black text-white"
+    @click="updateOrderStatus(order.id)"
+  >
+    Durumu Güncelle
+  </Button>
+</div>
+</div>
+</div>
+<!-- Processing Dialog -->
+<Dialog v-model:open="isProcessing">
+  <DialogContent class="sm:max-w-md">
+    <DialogHeader>
+      <DialogTitle class="text-[#18181B] text-center text-lg font-semibold leading-none">Processing</DialogTitle>
+      <DialogDescription class="text-center text-sm font-normal leading-5 text-[#71717A]">
+        Your order is being processed
+      </DialogDescription>
+    </DialogHeader>
+    <Progress :model-value="progress" class="w-full h-2" />
+  </DialogContent>
+</Dialog>
 </template>
-
-<style>
-.slide-down-enter-active,
-.slide-down-leave-active {
-  transition: all 0.3s ease;
-}
-.slide-down-enter-from {
-  opacity: 0;
-  transform: translateX(20px);
-}
-.slide-down-leave-to {
-  opacity: 0;
-  transform: translateX(20px);
-}
-</style>
