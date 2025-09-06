@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue"
+import { ref, computed, onMounted, nextTick } from "vue"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -254,10 +254,17 @@ const openVariantDeleteDialog = (variantId: number | string, productId: number |
   deleteTargetProductId.value = productId
   showDeleteDialog.value = true
 }
-
+const navigating = ref(false)
 // Edit variant
-const editVariation = (variationId: number | string, productId: number | string) => {
-  router.push(`/variant/${productId}/${variationId}`)
+const editVariation = async (variationId: number | string, productId: number | string) => {
+  if (navigating.value) return
+  navigating.value = true
+  await nextTick()
+  try {
+    await router.push(`/variant/${productId}/${variationId}`)
+  } finally {
+    navigating.value = false
+  }
 }
 import { useRoute } from 'vue-router'
 const route = useRoute()
@@ -426,9 +433,11 @@ onMounted(() => {
                     </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
   <!-- Product Edit -->
-  <DropdownMenuItem @click="router.push(`/variant/${product.id}`)">
-    Düzenle
-  </DropdownMenuItem>
+ <DropdownMenuItem
+  @click.stop.prevent="router.push(`/variant/${product.id}`)"
+>
+  Düzenle
+</DropdownMenuItem>
 
   <DropdownMenuSeparator />
 
@@ -486,7 +495,11 @@ onMounted(() => {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                     <DropdownMenuItem @click="editVariation(variation.id, product.id)">Düzenle</DropdownMenuItem>
+                     <DropdownMenuItem
+  @click.stop.prevent="editVariation(variation.id, product.id)"
+>
+  Düzenle
+</DropdownMenuItem>
                       <DropdownMenuSeparator />
 <DropdownMenuItem
 @click="openVariantDeleteDialog(variation.id, product.id)"
